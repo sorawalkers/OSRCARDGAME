@@ -1,0 +1,291 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * MESA VAZIA — design system
+ * "Mesa de RPG com fichas": mesa escura à luz de vela, ficha de papel,
+ * cartas com moldura, dados d20. Todas as cores em oklch.
+ */
+
+@theme inline {
+  --font-display: "IM Fell English SC", Georgia, serif;
+  --font-narrative: "IM Fell English", Georgia, serif;
+  --font-body: "Alegreya", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Mesa Vazia */
+  --color-table: var(--table);
+  --color-bone: var(--bone);
+  --color-bone-dim: var(--bone-dim);
+  --color-blood: var(--blood);
+  --color-blood-dark: var(--blood-dark);
+  --color-ember: var(--ember);
+  --color-ember-glow: var(--ember-glow);
+  --color-violet: var(--violet);
+  --color-rot: var(--rot);
+  --color-paper: var(--paper);
+  --color-paper-dark: var(--paper-dark);
+  --color-ink: var(--ink);
+  --color-ink-faded: var(--ink-faded);
+  --color-ink-red: var(--ink-red);
+  --color-fog: var(--fog);
+
+  --animate-flicker: flicker 4s ease-in-out infinite;
+  --animate-roll: roll 0.9s cubic-bezier(0.2, 0.8, 0.3, 1);
+  --animate-rise: rise 0.6s ease-out both;
+  --animate-ink: ink 1.2s ease-out both;
+}
+
+:root {
+  --radius: 0.25rem;
+
+  --background: oklch(0.13 0.008 50);
+  --foreground: oklch(0.87 0.03 85);
+  --card: oklch(0.17 0.01 50);
+  --card-foreground: oklch(0.87 0.03 85);
+  --popover: oklch(0.16 0.01 50);
+  --popover-foreground: oklch(0.87 0.03 85);
+  --primary: oklch(0.7 0.15 58);
+  --primary-foreground: oklch(0.14 0.01 50);
+  --secondary: oklch(0.22 0.012 50);
+  --secondary-foreground: oklch(0.87 0.03 85);
+  --muted: oklch(0.2 0.01 50);
+  --muted-foreground: oklch(0.62 0.025 75);
+  --accent: oklch(0.24 0.015 50);
+  --accent-foreground: oklch(0.9 0.03 85);
+  --destructive: oklch(0.5 0.18 25);
+  --destructive-foreground: oklch(0.92 0.02 85);
+  --border: oklch(0.32 0.02 60 / 60%);
+  --input: oklch(0.32 0.02 60 / 70%);
+  --ring: oklch(0.7 0.15 58);
+
+  --table: oklch(0.16 0.012 45);
+  --bone: oklch(0.87 0.03 85);
+  --bone-dim: oklch(0.62 0.025 75);
+  --blood: oklch(0.52 0.18 25);
+  --blood-dark: oklch(0.32 0.11 25);
+  --ember: oklch(0.72 0.15 58);
+  --ember-glow: oklch(0.82 0.14 75);
+  --violet: oklch(0.55 0.15 305);
+  --rot: oklch(0.64 0.12 125);
+  --paper: oklch(0.86 0.045 82);
+  --paper-dark: oklch(0.74 0.06 72);
+  --ink: oklch(0.2 0.02 50);
+  --ink-faded: oklch(0.42 0.03 60);
+  --ink-red: oklch(0.42 0.15 28);
+  --fog: oklch(0.13 0.008 50 / 88%);
+
+  --candle-light: radial-gradient(
+    ellipse 70% 55% at 50% -5%,
+    oklch(0.72 0.15 58 / 22%) 0%,
+    oklch(0.55 0.12 45 / 8%) 40%,
+    transparent 70%
+  );
+  --vignette: radial-gradient(ellipse at center, transparent 45%, oklch(0.06 0.005 50 / 85%) 100%);
+  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5  0 0 0 0 0.45  0 0 0 0 0.4  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  --paper-texture:
+    radial-gradient(ellipse at 20% 10%, oklch(0.9 0.04 85 / 70%), transparent 60%),
+    radial-gradient(ellipse at 85% 90%, oklch(0.68 0.07 65 / 45%), transparent 55%),
+    radial-gradient(circle at 70% 25%, oklch(0.72 0.07 65 / 20%) 0 3%, transparent 4%),
+    linear-gradient(170deg, var(--paper), var(--paper-dark));
+  --shadow-paper: 0 1px 0 oklch(1 0 0 / 8%) inset, 0 24px 50px -18px oklch(0 0 0 / 80%),
+    0 6px 14px oklch(0 0 0 / 50%);
+  --shadow-card: 0 18px 30px -12px oklch(0 0 0 / 85%), 0 2px 0 oklch(1 0 0 / 6%) inset;
+  --shadow-ember: 0 0 0 1px oklch(0.72 0.15 58 / 60%), 0 0 28px oklch(0.72 0.15 58 / 35%);
+  --gradient-blood: linear-gradient(90deg, var(--blood-dark), var(--blood));
+  --gradient-violet: linear-gradient(90deg, oklch(0.3 0.1 305), var(--violet));
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html,
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-body);
+  }
+
+  body {
+    min-height: 100vh;
+    background-image: var(--candle-light), radial-gradient(ellipse at 50% 120%, var(--table), var(--background) 70%);
+    background-attachment: fixed;
+  }
+
+  /* granulação leve por cima de tudo */
+  body::after {
+    content: "";
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background-image: var(--grain);
+    opacity: 0.18;
+    mix-blend-mode: overlay;
+  }
+
+  ::selection {
+    background: oklch(0.72 0.15 58 / 35%);
+  }
+}
+
+/* ---------- utilidades da mesa ---------- */
+
+@utility vignette {
+  position: relative;
+  &::before {
+    content: "";
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    background: var(--vignette);
+    z-index: 0;
+  }
+}
+
+@utility paper {
+  background: var(--paper-texture);
+  color: var(--ink);
+  box-shadow: var(--shadow-paper);
+  position: relative;
+  &::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background-image: var(--grain);
+    opacity: 0.35;
+    mix-blend-mode: multiply;
+    border-radius: inherit;
+  }
+}
+
+@utility paper-rule {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 27px,
+    oklch(0.42 0.03 60 / 18%) 27px 28px
+  );
+}
+
+@utility ink-line {
+  border-color: oklch(0.2 0.02 50 / 55%);
+}
+
+@utility font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+@utility font-narrative {
+  font-family: var(--font-narrative);
+}
+@utility font-body {
+  font-family: var(--font-body);
+}
+@utility font-mono {
+  font-family: var(--font-mono);
+}
+
+@utility label-mono {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+@utility drop-cap {
+  &::first-letter {
+    font-family: var(--font-display);
+    float: left;
+    font-size: 4.2em;
+    line-height: 0.8;
+    padding: 0.08em 0.12em 0 0;
+    color: var(--ember);
+    text-shadow: 0 0 24px oklch(0.72 0.15 58 / 40%);
+  }
+}
+
+@utility text-glow {
+  text-shadow: 0 0 22px oklch(0.72 0.15 58 / 45%);
+}
+
+@utility engraving {
+  filter: sepia(0.25) contrast(1.08);
+  mix-blend-mode: multiply;
+}
+
+@utility frame-double {
+  outline: 1px solid oklch(0.72 0.15 58 / 40%);
+  outline-offset: 4px;
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ---------- animações ---------- */
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; transform: scale(1) rotate(-1deg); }
+  20% { opacity: 0.86; transform: scale(0.97, 1.03) rotate(1deg); }
+  40% { opacity: 0.95; transform: scale(1.02, 0.98) rotate(-2deg); }
+  60% { opacity: 0.8; transform: scale(0.98, 1.04) rotate(1deg); }
+  80% { opacity: 0.92; transform: scale(1.01) rotate(0deg); }
+}
+
+@keyframes roll {
+  0% { transform: rotate(-540deg) scale(0.4); opacity: 0; }
+  60% { transform: rotate(20deg) scale(1.12); opacity: 1; }
+  100% { transform: rotate(0) scale(1); }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px) rotate(-1deg); }
+  40% { transform: translateX(5px) rotate(1deg); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+@keyframes ink {
+  from { opacity: 0; filter: blur(6px); }
+  to { opacity: 1; filter: blur(0); }
+}
