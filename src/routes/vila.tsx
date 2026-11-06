@@ -4,16 +4,25 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Choice } from "@/components/game/Choice";
 import { GameShell } from "@/components/game/GameShell";
-import { SAMPLE_HERO, mod } from "@/game/data";
+import { ARMORS, SHIELD_PRICE, WEAPONS } from "@/game/data";
+import { armorClass, classOf, priceFor, type Hero } from "@/game/hero";
+import { game, useGame, type TimeOfDay } from "@/game/store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/vila")({
   head: () => ({
     meta: [
       { title: "Pedra-Funda — Mesa Vazia" },
-      { name: "description", content: "Uma vila cercada por lobos: estalagem, mercado, igreja, ferraria, becos e gente que lembra de você." },
+      {
+        name: "description",
+        content:
+          "Uma vila cercada por lobos: estalagem, mercado, igreja, ferraria, becos e gente que lembra de você.",
+      },
       { property: "og:title", content: "Pedra-Funda, a vila cercada — Mesa Vazia" },
-      { property: "og:description", content: "Descanse, compre, aceite pedidos. À noite, os becos ficam perigosos." },
+      {
+        property: "og:description",
+        content: "Descanse, compre, aceite pedidos. À noite, os becos ficam perigosos.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -21,36 +30,147 @@ export const Route = createFileRoute("/vila")({
   component: Village,
 });
 
-type Time = "Manhã" | "Tarde" | "Noite";
+type Time = TimeOfDay;
 type PlaceId = "praca" | "estalagem" | "mercado" | "igreja" | "ferraria" | "becos";
 
-const PLACES: { id: PlaceId; name: string; closedAtNight?: boolean; dangerAtNight?: boolean; text: string; glyph: string }[] = [
-  { id: "praca", name: "Praça", text: "Um poço seco e um quadro de avisos coberto de nomes riscados. Alguém pregou ali o desenho de um lobo com olhos de gente.", glyph: "M-10 8 L10 8 M-6 8 L-6 -2 L6 -2 L6 8 M-8 -2 L0 -10 L8 -2" },
-  { id: "estalagem", name: "Estalagem do Ganso Cego", text: "Fumaça, cerveja choca e um fogo que nunca apaga. A dona, Tess, cobra adiantado.", glyph: "M-10 10 L-10 -4 L0 -11 L10 -4 L10 10 Z M-4 10 L-4 2 L4 2 L4 10 M-14 -8 L-10 -8" },
-  { id: "mercado", name: "Mercado", closedAtNight: true, text: "Bancas de lona e pouca coisa à venda. Os lobos cortaram as estradas há duas semanas.", glyph: "M-11 -4 L11 -4 L8 -10 L-8 -10 Z M-9 -4 L-9 10 M9 -4 L9 10 M-11 10 L11 10" },
-  { id: "igreja", name: "Igreja de São Velmo", text: "O Padre Anselm reza alto demais, como quem quer abafar outra voz.", glyph: "M0 -14 L0 -6 M-3 -11 L3 -11 M-8 10 L-8 -2 L0 -6 L8 -2 L8 10 Z M-2 10 L-2 4 A2 2 0 0 1 2 4 L2 10" },
-  { id: "ferraria", name: "Ferraria", closedAtNight: true, text: "Hesper martela de olhos fechados. Ela é cega há vinte anos e nunca errou um golpe.", glyph: "M-10 4 L10 4 L6 10 L-6 10 Z M-12 -2 L12 -2 L10 4 L-10 4 M4 -10 L10 -4" },
-  { id: "becos", name: "Becos", dangerAtNight: true, text: "Passagens estreitas entre casas que se inclinam umas sobre as outras. Alguém sempre está olhando.", glyph: "M-10 10 L-10 -10 M10 10 L10 -10 M-10 -2 L-3 -2 M3 4 L10 4 M-2 10 L2 -10" },
+const PLACES: {
+  id: PlaceId;
+  name: string;
+  closedAtNight?: boolean;
+  dangerAtNight?: boolean;
+  text: string;
+  glyph: string;
+}[] = [
+  {
+    id: "praca",
+    name: "Praça",
+    text: "Um poço seco e um quadro de avisos coberto de nomes riscados. Alguém pregou ali o desenho de um lobo com olhos de gente.",
+    glyph: "M-10 8 L10 8 M-6 8 L-6 -2 L6 -2 L6 8 M-8 -2 L0 -10 L8 -2",
+  },
+  {
+    id: "estalagem",
+    name: "Estalagem do Ganso Cego",
+    text: "Fumaça, cerveja choca e um fogo que nunca apaga. A dona, Tess, cobra adiantado.",
+    glyph: "M-10 10 L-10 -4 L0 -11 L10 -4 L10 10 Z M-4 10 L-4 2 L4 2 L4 10 M-14 -8 L-10 -8",
+  },
+  {
+    id: "mercado",
+    name: "Mercado",
+    closedAtNight: true,
+    text: "Bancas de lona e pouca coisa à venda. Os lobos cortaram as estradas há duas semanas.",
+    glyph: "M-11 -4 L11 -4 L8 -10 L-8 -10 Z M-9 -4 L-9 10 M9 -4 L9 10 M-11 10 L11 10",
+  },
+  {
+    id: "igreja",
+    name: "Igreja de São Velmo",
+    text: "O Padre Anselm reza alto demais, como quem quer abafar outra voz.",
+    glyph:
+      "M0 -14 L0 -6 M-3 -11 L3 -11 M-8 10 L-8 -2 L0 -6 L8 -2 L8 10 Z M-2 10 L-2 4 A2 2 0 0 1 2 4 L2 10",
+  },
+  {
+    id: "ferraria",
+    name: "Ferraria",
+    closedAtNight: true,
+    text: "Hesper martela de olhos fechados. Ela é cega há vinte anos e nunca errou um golpe.",
+    glyph: "M-10 4 L10 4 L6 10 L-6 10 Z M-12 -2 L12 -2 L10 4 L-10 4 M4 -10 L10 -4",
+  },
+  {
+    id: "becos",
+    name: "Becos",
+    dangerAtNight: true,
+    text: "Passagens estreitas entre casas que se inclinam umas sobre as outras. Alguém sempre está olhando.",
+    glyph: "M-10 10 L-10 -10 M10 10 L10 -10 M-10 -2 L-3 -2 M3 4 L10 4 M-2 10 L2 -10",
+  },
 ];
 
 const REL = ["Hostil", "Desconfiado", "Neutro", "Amigável", "Aliado"];
 
 const NPCS: Record<PlaceId, { name: string; role: string; rel: number; ask?: string }[]> = {
-  praca: [{ name: "Velho Corvin", role: "pregoeiro cego", rel: 2, ask: "Dizem que você cortou a corda de um enforcado. É verdade?" }],
-  estalagem: [{ name: "Tess Ruiva", role: "estalajadeira", rel: 3 }, { name: "Estranho de capuz", role: "jogador de dados", rel: 2, ask: "Uma partida? Três moedas contra um segredo." }],
+  praca: [
+    {
+      name: "Velho Corvin",
+      role: "pregoeiro cego",
+      rel: 2,
+      ask: "Dizem que você cortou a corda de um enforcado. É verdade?",
+    },
+  ],
+  estalagem: [
+    { name: "Tess Ruiva", role: "estalajadeira", rel: 3 },
+    {
+      name: "Estranho de capuz",
+      role: "jogador de dados",
+      rel: 2,
+      ask: "Uma partida? Três moedas contra um segredo.",
+    },
+  ],
   mercado: [{ name: "Brum", role: "mercador gordo", rel: 2 }],
-  igreja: [{ name: "Padre Anselm", role: "pároco", rel: 1, ask: "Traga-me a cabeça do lobo que fala, e Deus esquecerá o que você fez na estrada." }],
-  ferraria: [{ name: "Hesper", role: "ferreira cega", rel: 4, ask: "O martelo do meu filho está na ruína ao norte. Traga-o de volta." }],
-  becos: [{ name: "O Homem das Sombras", role: "receptador", rel: 0, ask: "Mercado negro. Venenos, chaves, nomes." }],
+  igreja: [
+    {
+      name: "Padre Anselm",
+      role: "pároco",
+      rel: 1,
+      ask: "Traga-me a cabeça do lobo que fala, e Deus esquecerá o que você fez na estrada.",
+    },
+  ],
+  ferraria: [
+    {
+      name: "Hesper",
+      role: "ferreira cega",
+      rel: 4,
+      ask: "O martelo do meu filho está na ruína ao norte. Traga-o de volta.",
+    },
+  ],
+  becos: [
+    {
+      name: "O Homem das Sombras",
+      role: "receptador",
+      rel: 0,
+      ask: "Mercado negro. Venenos, chaves, nomes.",
+    },
+  ],
 };
 
-const GOODS = [
-  { name: "Provisões (3 dias)", price: 6 },
-  { name: "Poção de cura", price: 25 },
-  { name: "Tocha ×3", price: 2 },
-  { name: "Água benta", price: 18 },
-  { name: "Corda (15 m)", price: 3 },
+// o que cada compra muda na ficha
+type Good = { name: string; price: number; buy: (h: Hero) => void };
+const GOODS: Good[] = [
+  { name: "Provisões (3 dias)", price: 6, buy: (h) => void (h.provisions += 3) },
+  { name: "Poção de cura", price: 25, buy: (h) => void h.items.push("Poção de cura") },
+  { name: "Tocha ×3", price: 2, buy: (h) => void h.items.push("Tocha ×3") },
+  { name: "Água benta", price: 18, buy: (h) => void h.items.push("Água benta") },
+  { name: "Corda (15 m)", price: 3, buy: (h) => void h.items.push("Corda (15 m)") },
 ];
+
+// a ferraria só oferece o que a classe pode usar (e só armaduras melhores que a atual)
+function smithGoods(h: Hero): Good[] {
+  const cls = classOf(h);
+  const out: Good[] = cls.weapons
+    .filter((id) => id !== h.weapon)
+    .map((id) => {
+      const w = WEAPONS[id];
+      return {
+        name: `${w.name} (d${w.die}${w.twoHanded ? ", duas mãos" : ""})`,
+        price: w.price,
+        buy: (x: Hero) => void (x.weapon = id),
+      };
+    });
+  for (const id of cls.armors.filter((a) => ARMORS[a].ac > ARMORS[h.armor].ac)) {
+    const a = ARMORS[id];
+    out.push({
+      name: `${a.name} (CA base ${a.ac})`,
+      price: a.price,
+      buy: (x: Hero) => void (x.armor = id),
+    });
+  }
+  if (cls.shield && !h.shield)
+    out.push({
+      name: "Escudo (+1 de CA)",
+      price: SHIELD_PRICE,
+      buy: (x: Hero) => void (x.shield = true),
+    });
+  return out;
+}
+
+const NEXT_TIME: Record<Time, Time> = { Manhã: "Tarde", Tarde: "Noite", Noite: "Noite" };
 
 function TimeGlyph({ t }: { t: Time }) {
   return (
@@ -61,7 +181,16 @@ function TimeGlyph({ t }: { t: Time }) {
         <>
           <circle r={t === "Manhã" ? 4 : 5} fill="currentColor" />
           {Array.from({ length: 8 }, (_, i) => (
-            <line key={i} x1="0" y1="7" x2="0" y2="10" stroke="currentColor" strokeWidth="1.4" transform={`rotate(${i * 45})`} />
+            <line
+              key={i}
+              x1="0"
+              y1="7"
+              x2="0"
+              y2="10"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              transform={`rotate(${i * 45})`}
+            />
           ))}
         </>
       )}
@@ -70,11 +199,40 @@ function TimeGlyph({ t }: { t: Time }) {
 }
 
 function Village() {
-  const [time, setTime] = useState<Time>("Tarde");
-  const [place, setPlace] = useState<PlaceId>("ferraria");
+  const { hero } = useGame();
+  if (!hero) return <GameShell location="Vila · Pedra-Funda">{null}</GameShell>;
+  return <VillageInner hero={hero} />;
+}
+
+function VillageInner({ hero }: { hero: Hero }) {
+  const s = useGame();
+  const time = s.time;
+  const [place, setPlace] = useState<PlaceId>("praca");
+  const [msg, setMsg] = useState<string>();
   const p = PLACES.find((x) => x.id === place)!;
   const closed = time === "Noite" && p.closedAtNight;
-  const discount = Math.max(0, mod(SAMPLE_HERO.attrs.CAR)) * 5;
+  const restPrice = priceFor(hero, 8);
+
+  const buy = (g: Good) => {
+    const price = priceFor(hero, g.price);
+    if (!game.spend(price)) return;
+    game.editHero(g.buy);
+    game.log("Compra", `Comprou ${g.name.toLowerCase()} em Pedra-Funda por ${price} de ouro.`);
+    setMsg(`Comprou ${g.name.toLowerCase()} por ${price} de ouro.`);
+  };
+
+  // dormir: cura 60% da vida (metade com Pesadelos), o dia vira e volta a ser manhã
+  const sleep = () => {
+    if (!game.spend(restPrice)) return;
+    const heal = Math.ceil(hero.hpMax * 0.6 * (hero.flaws.includes("Pesadelos") ? 0.5 : 1));
+    game.heal(heal);
+    game.sleep();
+    game.log(
+      "Vila",
+      `Dormiu na Estalagem do Ganso Cego, em Pedra-Funda. Recuperou ${heal} de vida.`,
+    );
+    setMsg(`Uma cama de palha e um cobertor que coça. Você recupera ${heal} de vida.`);
+  };
 
   return (
     <GameShell location={`Vila · Pedra-Funda · ${time}`}>
@@ -89,17 +247,21 @@ function Village() {
           </div>
           <div className="flex rounded-sm border border-border/60 p-0.5">
             {(["Manhã", "Tarde", "Noite"] as Time[]).map((t) => (
-              <button
+              <span
                 key={t}
-                onClick={() => setTime(t)}
+                aria-current={time === t ? "true" : undefined}
                 className={cn(
                   "flex items-center gap-2 rounded-sm px-3 py-1.5",
-                  time === t ? (t === "Noite" ? "bg-violet/20 text-violet" : "bg-ember/15 text-ember") : "text-bone-dim hover:text-bone",
+                  time === t
+                    ? t === "Noite"
+                      ? "bg-violet/20 text-violet"
+                      : "bg-ember/15 text-ember"
+                    : "text-bone-dim hover:text-bone",
                 )}
               >
                 <TimeGlyph t={t} />
                 <span className="label-mono">{t}</span>
-              </button>
+              </span>
             ))}
           </div>
         </div>
@@ -113,20 +275,40 @@ function Village() {
               return (
                 <li key={pl.id}>
                   <button
-                    onClick={() => setPlace(pl.id)}
+                    onClick={() => {
+                      setPlace(pl.id);
+                      setMsg(undefined);
+                    }}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-sm border px-3 py-3 text-left transition-all",
-                      place === pl.id ? "border-ember bg-ember/10" : "border-border/60 hover:border-bone/40",
+                      place === pl.id
+                        ? "border-ember bg-ember/10"
+                        : "border-border/60 hover:border-bone/40",
                       isClosed && "opacity-45",
                     )}
                   >
-                    <svg viewBox="-14 -14 28 28" className={cn("size-8 shrink-0", danger ? "text-blood" : "text-bone")}>
-                      <path d={pl.glyph} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                    <svg
+                      viewBox="-14 -14 28 28"
+                      className={cn("size-8 shrink-0", danger ? "text-blood" : "text-bone")}
+                    >
+                      <path
+                        d={pl.glyph}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                     <span className="flex-1">
-                      <span className="block font-display text-lg leading-tight text-bone">{pl.name}</span>
+                      <span className="block font-display text-lg leading-tight text-bone">
+                        {pl.name}
+                      </span>
                       <span className="label-mono text-[0.58rem] text-bone-dim">
-                        {isClosed ? "fechado" : danger ? "perigoso à noite" : `${NPCS[pl.id].length} pessoa(s)`}
+                        {isClosed
+                          ? "fechado"
+                          : danger
+                            ? "perigoso à noite"
+                            : `${NPCS[pl.id].length} pessoa(s)`}
                       </span>
                     </span>
                   </button>
@@ -139,8 +321,12 @@ function Village() {
           <section key={place + time} className="animate-rise">
             <h2 className="font-display text-4xl text-bone">{p.name}</h2>
             <p className="drop-cap mt-4 max-w-2xl font-narrative text-[1.25rem] leading-relaxed text-bone">
-              {closed ? "As portas estão trancadas e a forja, fria. Volte de manhã — se ainda houver manhã." : p.text}
+              {closed
+                ? "As portas estão trancadas e a forja, fria. Volte de manhã — se ainda houver manhã."
+                : p.text}
             </p>
+
+            {msg && <p className="mt-4 font-narrative text-lg italic text-ember">{msg}</p>}
 
             {!closed && (
               <div className="mt-8 grid gap-6 xl:grid-cols-2">
@@ -158,17 +344,42 @@ function Village() {
                             <div className="text-right">
                               <div className="flex gap-0.5">
                                 {REL.map((_, i) => (
-                                  <span key={i} className={cn("size-2 rotate-45 border border-ink/50", i <= n.rel && (n.rel <= 1 ? "bg-ink-red" : "bg-ink"))} />
+                                  <span
+                                    key={i}
+                                    className={cn(
+                                      "size-2 rotate-45 border border-ink/50",
+                                      i <= n.rel && (n.rel <= 1 ? "bg-ink-red" : "bg-ink"),
+                                    )}
+                                  />
                                 ))}
                               </div>
-                              <div className={cn("label-mono mt-1 text-[0.55rem]", n.rel <= 1 ? "text-ink-red" : "text-ink-faded")}>{REL[n.rel]}</div>
+                              <div
+                                className={cn(
+                                  "label-mono mt-1 text-[0.55rem]",
+                                  n.rel <= 1 ? "text-ink-red" : "text-ink-faded",
+                                )}
+                              >
+                                {REL[n.rel]}
+                              </div>
                             </div>
                           </div>
-                          {n.ask && <p className="mt-3 border-l-2 border-ink-red/50 pl-3 font-narrative italic text-ink">“{n.ask}”</p>}
+                          {n.ask && (
+                            <p className="mt-3 border-l-2 border-ink-red/50 pl-3 font-narrative italic text-ink">
+                              “{n.ask}”
+                            </p>
+                          )}
                           <div className="mt-3 flex flex-wrap gap-2">
-                            <Button variant="ink" size="sm">Conversar</Button>
-                            {n.ask && <Button variant="inkSolid" size="sm">Aceitar pedido</Button>}
-                            <Button variant="ink" size="sm" className="text-ink-red">Ameaçar · CAR</Button>
+                            <Button variant="ink" size="sm">
+                              Conversar
+                            </Button>
+                            {n.ask && (
+                              <Button variant="inkSolid" size="sm">
+                                Aceitar pedido
+                              </Button>
+                            )}
+                            <Button variant="ink" size="sm" className="text-ink-red">
+                              Ameaçar · CAR
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -181,20 +392,27 @@ function Village() {
                     <>
                       <div className="label-mono mb-3 flex justify-between text-bone-dim">
                         <span>À venda</span>
-                        {discount > 0 && <span className="text-rot">−{discount}% por Carisma</span>}
+                        <span>Você tem {hero.gold} de ouro</span>
                       </div>
                       <ul className="rounded-sm border border-border/60">
-                        {(place === "ferraria"
-                          ? [{ name: "Machado de batalha (d8)", price: 40 }, { name: "Martelo de guerra (d8)", price: 45 }, { name: "Montante (d10)", price: 70 }, { name: "Armadura de placas (CA 16)", price: 120 }]
-                          : GOODS
-                        ).map((g) => {
-                          const price = Math.round(g.price * (1 - discount / 100));
+                        {(place === "ferraria" ? smithGoods(hero) : GOODS).map((g) => {
+                          const price = priceFor(hero, g.price);
                           return (
-                            <li key={g.name} className="flex items-center justify-between border-b border-border/40 px-4 py-2.5 last:border-0">
+                            <li
+                              key={g.name}
+                              className="flex items-center justify-between border-b border-border/40 px-4 py-2.5 last:border-0"
+                            >
                               <span className="font-body text-bone">{g.name}</span>
                               <span className="flex items-center gap-3">
                                 <span className="font-mono text-sm text-ember">{price} o</span>
-                                <Button variant="bone" size="sm" disabled={price > SAMPLE_HERO.gold}>Comprar</Button>
+                                <Button
+                                  variant="bone"
+                                  size="sm"
+                                  disabled={price > hero.gold}
+                                  onClick={() => buy(g)}
+                                >
+                                  Comprar
+                                </Button>
                               </span>
                             </li>
                           );
@@ -206,16 +424,28 @@ function Village() {
                       <div className="label-mono mb-1 text-bone-dim">O que fazer</div>
                       {place === "estalagem" && (
                         <>
-                          <Choice check="5 ouro">Pagar um quarto e dormir até a manhã.</Choice>
+                          <Choice
+                            check={`${restPrice} ouro`}
+                            disabled={hero.gold < restPrice}
+                            onClick={sleep}
+                          >
+                            Pagar um quarto e dormir até a manhã.
+                          </Choice>
                           <Choice check="CAR · CD 11">Ouvir rumores no balcão.</Choice>
-                          <Choice check="d20 vs estranho" tone="violet">Aceitar a partida de dados do estranho.</Choice>
+                          <Choice check="d20 vs estranho" tone="violet">
+                            Aceitar a partida de dados do estranho.
+                          </Choice>
                         </>
                       )}
                       {place === "igreja" && (
                         <>
                           <Choice check="SAB · CD 10">Rezar e recuperar as orações.</Choice>
-                          <Choice check="−1 corrupção · 15 ouro">Confessar-se ao Padre Anselm.</Choice>
-                          <Choice tone="violet" check="+2 corrupção">Roubar o cálice do altar.</Choice>
+                          <Choice check="−1 corrupção · 15 ouro">
+                            Confessar-se ao Padre Anselm.
+                          </Choice>
+                          <Choice tone="violet" check="+2 corrupção">
+                            Roubar o cálice do altar.
+                          </Choice>
                         </>
                       )}
                       {place === "praca" && (
@@ -226,7 +456,9 @@ function Village() {
                       )}
                       {place === "becos" && (
                         <>
-                          <Choice check="DES · CD 12" tone={time === "Noite" ? "blood" : undefined}>Seguir o vulto de capuz.</Choice>
+                          <Choice check="DES · CD 12" tone={time === "Noite" ? "blood" : undefined}>
+                            Seguir o vulto de capuz.
+                          </Choice>
                           <Choice tone="violet">Comprar no mercado negro.</Choice>
                         </>
                       )}
@@ -240,9 +472,17 @@ function Village() {
               <Button asChild variant="ember">
                 <Link to="/mapa">Deixar a vila</Link>
               </Button>
-              <Button variant="bone" onClick={() => setTime(time === "Manhã" ? "Tarde" : time === "Tarde" ? "Noite" : "Manhã")}>
-                Esperar · passar o tempo
+              <Button
+                variant="bone"
+                disabled={time === "Noite"}
+                onClick={() => game.setTime(NEXT_TIME[time])}
+              >
+                {time === "Noite" ? "Já é noite · durma na estalagem" : "Esperar · passar o tempo"}
               </Button>
+              <span className="self-center label-mono text-bone-dim">
+                CA {armorClass(hero)} · {WEAPONS[hero.weapon].name} · {ARMORS[hero.armor].name}
+                {hero.shield && !WEAPONS[hero.weapon].twoHanded ? " e escudo" : ""}
+              </span>
             </div>
           </section>
         </div>

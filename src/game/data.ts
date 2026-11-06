@@ -40,16 +40,88 @@ export type Race = {
   trait: string;
   mods: Partial<Record<AttrKey, number>>;
   noMage?: boolean;
+  /** Humano: +2 no atributo que o jogador escolher */
+  chooseAttr?: boolean;
 };
 
 export const RACES: Race[] = [
-  { id: "humano", name: "Humano", adjust: "+2 no atributo escolhido", trait: "Ambição: +10% de XP", mods: {} },
-  { id: "anao", name: "Anão", adjust: "CON +1 · CAR −1", trait: "+4 contra veneno e magia", mods: { CON: 1, CAR: -1 }, noMage: true },
-  { id: "elfo", name: "Elfo", adjust: "DES +1 · CON −1", trait: "Vê 1 passo a mais no mapa; imune à paralisia", mods: { DES: 1, CON: -1 } },
-  { id: "halfling", name: "Halfling", adjust: "FOR −1 · DES +1", trait: "+2 CA contra fortes; nunca é surpreendido", mods: { FOR: -1, DES: 1 }, noMage: true },
-  { id: "meio-elfo", name: "Meio-Elfo", adjust: "nenhum", trait: "+2 em Carisma fora de combate", mods: {} },
-  { id: "meio-orc", name: "Meio-Orc", adjust: "FOR +1 · CON +1 · CAR −2", trait: "+1 de dano por golpe; preços 15% maiores", mods: { FOR: 1, CON: 1, CAR: -2 } },
+  {
+    id: "humano",
+    name: "Humano",
+    adjust: "+2 no atributo escolhido",
+    trait: "Ambição: +10% de XP",
+    mods: {},
+    chooseAttr: true,
+  },
+  {
+    id: "anao",
+    name: "Anão",
+    adjust: "CON +1 · CAR −1",
+    trait: "+4 contra veneno e magia",
+    mods: { CON: 1, CAR: -1 },
+    noMage: true,
+  },
+  {
+    id: "elfo",
+    name: "Elfo",
+    adjust: "DES +1 · CON −1",
+    trait: "Vê 1 passo a mais no mapa; imune à paralisia",
+    mods: { DES: 1, CON: -1 },
+  },
+  {
+    id: "halfling",
+    name: "Halfling",
+    adjust: "FOR −1 · DES +1",
+    trait: "+2 CA contra fortes; nunca é surpreendido",
+    mods: { FOR: -1, DES: 1 },
+    noMage: true,
+  },
+  {
+    id: "meio-elfo",
+    name: "Meio-Elfo",
+    adjust: "nenhum",
+    trait: "+2 em Carisma fora de combate",
+    mods: {},
+  },
+  {
+    id: "meio-orc",
+    name: "Meio-Orc",
+    adjust: "FOR +1 · CON +1 · CAR −2",
+    trait: "+1 de dano por golpe; preços 15% maiores",
+    mods: { FOR: 1, CON: 1, CAR: -2 },
+  },
 ];
+
+/* ---------------- Equipamento (referencia/MESA_VAZIA.md §4.3) ---------------- */
+
+export type WeaponId =
+  "adaga" | "cajado" | "maca" | "espadac" | "espada" | "machado" | "martelo" | "montante";
+export type ArmorId = "nenhuma" | "couro" | "malha" | "placas";
+
+export const WEAPONS: Record<
+  WeaponId,
+  { name: string; die: number; price: number; blunt?: boolean; twoHanded?: boolean }
+> = {
+  adaga: { name: "Adaga", die: 4, price: 4 },
+  cajado: { name: "Cajado", die: 4, price: 3, blunt: true },
+  maca: { name: "Maça", die: 6, price: 10, blunt: true },
+  espadac: { name: "Espada curta", die: 6, price: 12 },
+  espada: { name: "Espada longa", die: 8, price: 20 },
+  machado: { name: "Machado de batalha", die: 8, price: 18 },
+  martelo: { name: "Martelo de guerra", die: 8, price: 20, blunt: true },
+  montante: { name: "Montante", die: 10, price: 35, twoHanded: true },
+};
+
+export const ARMORS: Record<ArmorId, { name: string; ac: number; price: number }> = {
+  nenhuma: { name: "Sem armadura", ac: 10, price: 0 },
+  couro: { name: "Gibão de couro", ac: 12, price: 12 },
+  malha: { name: "Cota de malha", ac: 14, price: 40 },
+  placas: { name: "Armadura de placas", ac: 16, price: 90 },
+};
+
+export const SHIELD_PRICE = 10;
+
+/* ---------------- Classes (referencia/MESA_VAZIA.md §3.3) ---------------- */
 
 export type HeroClass = {
   id: string;
@@ -57,45 +129,165 @@ export type HeroClass = {
   main: AttrKey;
   baseHp: number;
   hitDie: string;
+  hd: number;
   gear: string;
   ability: string;
+  /** alvo no d20 dos testes de resistência: veneno, paralisia, magia */
   saves: [number, number, number];
+  weapon: WeaponId;
+  armor: ArmorId;
+  shield: boolean;
+  weapons: WeaponId[];
+  armors: ArmorId[];
+  /** xpTable[n] = experiência para chegar ao nível n+1 */
+  xpTable: number[];
 };
 
+const ALL_ARMORS: ArmorId[] = ["nenhuma", "couro", "malha", "placas"];
+
 export const CLASSES: HeroClass[] = [
-  { id: "guerreiro", name: "Guerreiro", main: "FOR", baseHp: 34, hitDie: "d10", gear: "Espada longa (d8), cota de malha e escudo", ability: "+1 de ataque por nível; usa tudo", saves: [12, 14, 16] },
-  { id: "clerigo", name: "Clérigo", main: "SAB", baseHp: 30, hitDie: "d8", gear: "Maça (d6), cota de malha e escudo", ability: "Expulsar Mortos-Vivos; orações que se esgotam", saves: [11, 14, 15] },
-  { id: "ladrao", name: "Ladrão", main: "DES", baseHp: 26, hitDie: "d6", gear: "Espada curta (d6), gibão de couro", ability: "Ataque furtivo ×2; começa lutas oculto", saves: [13, 13, 15] },
-  { id: "mago", name: "Mago", main: "INT", baseHp: 20, hitDie: "d4", gear: "Adaga (d4), sem armadura", ability: "Grimório: magias fortes que se esgotam", saves: [13, 13, 14] },
+  {
+    id: "guerreiro",
+    name: "Guerreiro",
+    main: "FOR",
+    baseHp: 34,
+    hitDie: "d10",
+    hd: 10,
+    gear: "Espada longa (d8), cota de malha e escudo",
+    ability: "+1 de ataque por nível; usa tudo",
+    saves: [12, 14, 16],
+    weapon: "espada",
+    armor: "malha",
+    shield: true,
+    weapons: Object.keys(WEAPONS) as WeaponId[],
+    armors: ALL_ARMORS,
+    xpTable: [0, 60, 150, 300, 520, 800],
+  },
+  {
+    id: "clerigo",
+    name: "Clérigo",
+    main: "SAB",
+    baseHp: 30,
+    hitDie: "d8",
+    hd: 8,
+    gear: "Maça (d6), cota de malha e escudo",
+    ability: "Expulsar Mortos-Vivos; orações que se esgotam; só armas sem corte",
+    saves: [11, 14, 15],
+    weapon: "maca",
+    armor: "malha",
+    shield: true,
+    weapons: ["maca", "martelo", "cajado"],
+    armors: ALL_ARMORS,
+    xpTable: [0, 55, 135, 270, 470, 730],
+  },
+  {
+    id: "ladrao",
+    name: "Ladrão",
+    main: "DES",
+    baseHp: 26,
+    hitDie: "d6",
+    hd: 6,
+    gear: "Espada curta (d6), gibão de couro",
+    ability: "Ataque furtivo ×2; começa lutas oculto; só couro",
+    saves: [13, 13, 15],
+    weapon: "espadac",
+    armor: "couro",
+    shield: false,
+    weapons: ["adaga", "espadac", "espada"],
+    armors: ["nenhuma", "couro"],
+    xpTable: [0, 45, 120, 240, 420, 660],
+  },
+  {
+    id: "mago",
+    name: "Mago",
+    main: "INT",
+    baseHp: 20,
+    hitDie: "d4",
+    hd: 4,
+    gear: "Adaga (d4), sem armadura",
+    ability: "Grimório: magias fortes que se esgotam; sem armadura",
+    saves: [13, 13, 14],
+    weapon: "adaga",
+    armor: "nenhuma",
+    shield: false,
+    weapons: ["adaga", "cajado"],
+    armors: ["nenhuma"],
+    xpTable: [0, 70, 170, 340, 580, 900],
+  },
 ];
 
-export const BACKGROUNDS = [
-  { name: "Filho de coveiro", bonus: "+2 SAB · pá velha" },
-  { name: "Ex-inquisidor", bonus: "+2 FOR · 20 ouro" },
-  { name: "Sobrevivente da peste", bonus: "+2 CON · +4 vida" },
-  { name: "Desertor do exército", bonus: "+2 FOR · carta Golpe Sujo" },
-  { name: "Ladra de relicários", bonus: "+2 DES · 30 ouro" },
-  { name: "Herdeira falida", bonus: "+2 CAR · 40 ouro" },
-  { name: "Marcado pela lua", bonus: "+2 INT · +2 corrupção" },
-  { name: "Curandeira de aldeia", bonus: "+2 SAB · 3 ervas" },
-  { name: "Caçador de recompensas", bonus: "+2 DES · carta Rastrear" },
-  { name: "Monge expulso", bonus: "+2 CON · carta Meditação" },
-  { name: "Aprendiz de alquimista", bonus: "+2 INT · 2 frascos" },
-  { name: "Menestrel sem plateia", bonus: "+2 CAR · alaúde" },
+/* ---------------- Antecedentes e traços (referencia/MESA_VAZIA.md §3.4–3.5) ---------------- */
+
+export type Background = {
+  name: string;
+  bonus: string;
+  attrs?: Partial<Record<AttrKey, number>>;
+  gold?: number;
+  provisions?: number;
+  hp?: number;
+  corruption?: number;
+  card?: string;
+};
+
+export const BACKGROUNDS: Background[] = [
+  { name: "Filho de coveiro", bonus: "+2 CON · +2 provisões", attrs: { CON: 2 }, provisions: 2 },
+  { name: "Ex-inquisidor", bonus: "Carta Sal e Ferro · +10 ouro", gold: 10, card: "Sal e Ferro" },
+  { name: "Sobrevivente da peste", bonus: "+6 de vida máxima", hp: 6 },
+  {
+    name: "Desertor do exército",
+    bonus: "+2 FOR · carta Grito de Guerra",
+    attrs: { FOR: 2 },
+    card: "Grito de Guerra",
+  },
+  { name: "Ladra de relicários", bonus: "+2 DES · +15 ouro", attrs: { DES: 2 }, gold: 15 },
+  { name: "Herdeira falida", bonus: "+40 ouro", gold: 40 },
+  {
+    name: "Marcado pela lua",
+    bonus: "+2 SAB · +2 INT · +2 corrupção",
+    attrs: { SAB: 2, INT: 2 },
+    corruption: 2,
+  },
+  {
+    name: "Curandeira de aldeia",
+    bonus: "+2 SAB · carta Prece Desesperada",
+    attrs: { SAB: 2 },
+    card: "Prece Desesperada",
+  },
+  {
+    name: "Caçador de recompensas",
+    bonus: "+2 DES · carta Faca de Osso",
+    attrs: { DES: 2 },
+    card: "Faca de Osso",
+  },
+  {
+    name: "Monge expulso",
+    bonus: "+2 SAB · uma carta inicial melhorada",
+    attrs: { SAB: 2 },
+    card: "uma carta inicial melhorada",
+  },
+  { name: "Aprendiz de alquimista", bonus: "+2 INT · +15 ouro", attrs: { INT: 2 }, gold: 15 },
+  { name: "Menestrel sem plateia", bonus: "+2 CAR · +10 ouro", attrs: { CAR: 2 }, gold: 10 },
 ];
 
 export const VIRTUES = [
-  { name: "Mãos firmes", cost: 1 },
-  { name: "Língua afiada", cost: 1 },
-  { name: "Robusto", cost: 1 },
-  { name: "Pé na estrada", cost: 1 },
-  { name: "Sono leve", cost: 1 },
-  { name: "Pechincheiro", cost: 1 },
-  { name: "Veterano", cost: 2 },
-  { name: "Nascido com sorte", cost: 2 },
+  { name: "Mãos firmes", cost: 1, desc: "+1 em todas as rolagens de Destreza." },
+  { name: "Língua afiada", cost: 1, desc: "+2 em Carisma fora de combate." },
+  { name: "Robusto", cost: 1, desc: "+6 de vida máxima." },
+  { name: "Pé na estrada", cost: 1, desc: "A cada 3 passos, um não gasta provisão." },
+  { name: "Sono leve", cost: 1, desc: "Emboscadas não causam dano." },
+  { name: "Pechincheiro", cost: 1, desc: "Preços 20% menores nas vilas." },
+  { name: "Veterano", cost: 2, desc: "Começa cada combate com +3 de foco." },
+  { name: "Nascido com sorte", cost: 2, desc: "Crítico com 19 ou 20; +3 nas rolagens de sorte." },
 ];
 
-export const FLAWS = ["Manco", "Pesadelos", "Glutão", "Procurado", "Frágil", "Sangue ruim"];
+export const FLAWS = [
+  { name: "Manco", desc: "−4 nas tentativas de fuga." },
+  { name: "Pesadelos", desc: "Dormir e descansar curam metade." },
+  { name: "Glutão", desc: "A cada 4 passos, gasta 1 provisão a mais." },
+  { name: "Procurado", desc: "Preços 25% maiores nas vilas." },
+  { name: "Frágil", desc: "−5 de vida máxima." },
+  { name: "Sangue ruim", desc: "Começa com 2 de corrupção." },
+];
 
 export const MOTIVATIONS = [
   "Levar as cinzas da mãe até o mar",
@@ -108,7 +300,18 @@ export const MOTIVATIONS = [
   "Morrer longe de casa, mas não à toa",
 ];
 
-export const NAMES = ["Aldric", "Morwen", "Tobias Vey", "Isolde", "Garrick", "Brana", "Edmund Crane", "Sela", "Hob", "Marthe"];
+export const NAMES = [
+  "Aldric",
+  "Morwen",
+  "Tobias Vey",
+  "Isolde",
+  "Garrick",
+  "Brana",
+  "Edmund Crane",
+  "Sela",
+  "Hob",
+  "Marthe",
+];
 
 /* ---------------- Mundo ---------------- */
 
@@ -121,7 +324,8 @@ export const REGIONS = [
   "Minas de Ossomar",
 ];
 
-export type Intent = "atacar" | "proteger" | "enfraquecer" | "envenenar" | "amaldicoar" | "fortalecer" | "curar";
+export type Intent =
+  "atacar" | "proteger" | "enfraquecer" | "envenenar" | "amaldicoar" | "fortalecer" | "curar";
 
 export type Monster = {
   id: string;
@@ -141,57 +345,115 @@ export type Monster = {
 
 export const MONSTERS: Monster[] = [
   {
-    id: "carnical", name: "Carniçal", epithet: "Comedor de Mortos", kind: "normal",
-    hp: 18, defense: 11, hit: 3, damage: "1d6", image: carnical,
-    habitat: "Cemitérios, ruínas", intents: ["atacar", "enfraquecer", "atacar"],
+    id: "carnical",
+    name: "Carniçal",
+    epithet: "Comedor de Mortos",
+    kind: "normal",
+    hp: 18,
+    defense: 11,
+    hit: 3,
+    damage: "1d6",
+    image: carnical,
+    habitat: "Cemitérios, ruínas",
+    intents: ["atacar", "enfraquecer", "atacar"],
     lore: "Fareja a tumba recém-fechada. Suas garras deixam a carne dormente, e quem cai paralisado vira jantar.",
     deathLine: "Ele se dobra sobre os ossos que roía e não levanta mais.",
   },
   {
-    id: "enforcado", name: "Enforcado", epithet: "O Que Ainda Respira", kind: "normal",
-    hp: 22, defense: 10, hit: 2, damage: "1d8", image: enforcado,
-    habitat: "Charneca, forcas", intents: ["atacar", "amaldicoar", "atacar"],
+    id: "enforcado",
+    name: "Enforcado",
+    epithet: "O Que Ainda Respira",
+    kind: "normal",
+    hp: 22,
+    defense: 10,
+    hit: 2,
+    damage: "1d8",
+    image: enforcado,
+    habitat: "Charneca, forcas",
+    intents: ["atacar", "amaldicoar", "atacar"],
     lore: "A corda não terminou o serviço. Ele caminha procurando o carrasco, e qualquer pescoço serve.",
     deathLine: "A corda enfim aperta. Ele fica em silêncio, pendurado no nada.",
   },
   {
-    id: "lobo", name: "Lobo da Névoa", epithet: "Fome com Dentes", kind: "forte",
-    hp: 30, defense: 12, hit: 4, damage: "1d10", image: lobo,
-    habitat: "Floresta Sem Pássaros", intents: ["atacar", "fortalecer", "atacar"],
+    id: "lobo",
+    name: "Lobo da Névoa",
+    epithet: "Fome com Dentes",
+    kind: "forte",
+    hp: 30,
+    defense: 12,
+    hit: 4,
+    damage: "1d10",
+    image: lobo,
+    habitat: "Floresta Sem Pássaros",
+    intents: ["atacar", "fortalecer", "atacar"],
     lore: "Caça em matilhas de um só. Some na névoa e volta pelo lado que você não está olhando.",
     deathLine: "O corpo se desfaz em névoa, e só os dentes ficam na lama.",
   },
   {
-    id: "flagelante", name: "Flagelante", epithet: "Penitente de Pregos", kind: "normal",
-    hp: 20, defense: 11, hit: 3, damage: "1d6+1", image: flagelante,
-    habitat: "Estradas, procissões", intents: ["atacar", "proteger", "envenenar"],
+    id: "flagelante",
+    name: "Flagelante",
+    epithet: "Penitente de Pregos",
+    kind: "normal",
+    hp: 20,
+    defense: 11,
+    hit: 3,
+    damage: "1d6+1",
+    image: flagelante,
+    habitat: "Estradas, procissões",
+    intents: ["atacar", "proteger", "envenenar"],
     lore: "Açoita a si mesmo até sangrar e acha que você é o pecado que falta expiar.",
     deathLine: "Ele cai de joelhos, rezando, e o flagelo escorrega da mão.",
   },
   {
-    id: "mae-das-moscas", name: "A Mãe das Moscas", epithet: "Coração da Charneca", kind: "chefe",
-    hp: 60, defense: 13, hit: 5, damage: "2d6",
-    habitat: "Charneca dos Enforcados", intents: ["envenenar", "atacar", "fortalecer", "atacar"],
+    id: "mae-das-moscas",
+    name: "A Mãe das Moscas",
+    epithet: "Coração da Charneca",
+    kind: "chefe",
+    hp: 60,
+    defense: 13,
+    hit: 5,
+    damage: "2d6",
+    habitat: "Charneca dos Enforcados",
+    intents: ["envenenar", "atacar", "fortalecer", "atacar"],
     lore: "O zumbido chega antes dela. Cada mosca é um filho, e cada filho tem fome do que é vivo.",
     deathLine: "O enxame se dispersa no vento, e o silêncio pesa mais que o zumbido.",
   },
   {
-    id: "bispo", name: "O Bispo Sem Rosto", epithet: "Coração do Vale", kind: "chefe",
-    hp: 70, defense: 14, hit: 5, damage: "2d6", image: bispo,
-    habitat: "Vale do Sino Partido", intents: ["amaldicoar", "atacar", "curar", "atacar"],
+    id: "bispo",
+    name: "O Bispo Sem Rosto",
+    epithet: "Coração do Vale",
+    kind: "chefe",
+    hp: 70,
+    defense: 14,
+    hit: 5,
+    damage: "2d6",
+    image: bispo,
+    habitat: "Vale do Sino Partido",
+    intents: ["amaldicoar", "atacar", "curar", "atacar"],
     lore: "Rezou tanto que Deus apagou seu rosto. Agora ele ouve confissões e cobra em carne.",
     deathLine: "A mitra rola pelo chão. Debaixo dela não havia ninguém.",
   },
   {
-    id: "rei-lama", name: "O Rei Debaixo da Lama", epithet: "Coração de Velmire", kind: "chefe",
-    hp: 80, defense: 12, hit: 6, damage: "2d8", image: rei,
-    habitat: "Pântano de Velmire", intents: ["atacar", "proteger", "enfraquecer", "atacar"],
+    id: "rei-lama",
+    name: "O Rei Debaixo da Lama",
+    epithet: "Coração de Velmire",
+    kind: "chefe",
+    hp: 80,
+    defense: 12,
+    hit: 6,
+    damage: "2d8",
+    image: rei,
+    habitat: "Pântano de Velmire",
+    intents: ["atacar", "proteger", "enfraquecer", "atacar"],
     lore: "Todo afogado do pântano é seu súdito. A coroa enferrujou na cabeça, e ele não lembra o próprio nome.",
     deathLine: "Ele afunda devagar, levando a coroa e os súditos para o fundo.",
   },
 ];
 
-export const INTENT_LABEL: Record<Intent, { label: string; tone: "blood" | "bone" | "violet" | "rot" | "ember" }> = {
+export const INTENT_LABEL: Record<
+  Intent,
+  { label: string; tone: "blood" | "bone" | "violet" | "rot" | "ember" }
+> = {
   atacar: { label: "Atacar", tone: "blood" },
   proteger: { label: "Proteger-se", tone: "bone" },
   enfraquecer: { label: "Enfraquecer", tone: "violet" },
@@ -219,13 +481,65 @@ export type Card = {
 };
 
 export const DECK: Card[] = [
-  { id: "golpe", name: "Golpe de Espada", type: "Ataque", attr: "FOR", dc: "Defesa", success: "d8 + FOR de dano", fail: "Erra. Abre a guarda.", damage: 7 },
-  { id: "estocada", name: "Estocada Dupla", type: "Ataque", attr: "DES", dc: "Defesa", success: "Dois golpes de d4", fail: "Um golpe de 1", damage: 5 },
-  { id: "escudo", name: "Erguer Escudo", type: "Defesa", success: "Bloqueia 6. +2 CA neste turno.", block: 6 },
+  {
+    id: "golpe",
+    name: "Golpe de Espada",
+    type: "Ataque",
+    attr: "FOR",
+    dc: "Defesa",
+    success: "d8 + FOR de dano",
+    fail: "Erra. Abre a guarda.",
+    damage: 7,
+  },
+  {
+    id: "estocada",
+    name: "Estocada Dupla",
+    type: "Ataque",
+    attr: "DES",
+    dc: "Defesa",
+    success: "Dois golpes de d4",
+    fail: "Um golpe de 1",
+    damage: 5,
+  },
+  {
+    id: "escudo",
+    name: "Erguer Escudo",
+    type: "Defesa",
+    success: "Bloqueia 6. +2 CA neste turno.",
+    block: 6,
+  },
   { id: "foco", name: "Respirar Fundo", type: "Truque", success: "Foco: +3 na próxima rolagem" },
-  { id: "sujo", name: "Golpe Sujo", type: "Ataque", attr: "DES", dc: "12", success: "4 de dano e Fraqueza", fail: "Ele percebe. Nada.", damage: 4 },
-  { id: "oracao", name: "Oração de Cura", type: "Oração", attr: "SAB", dc: "10", success: "Cura 2d6", fail: "Cura 2", heal: 7, exhaust: true },
-  { id: "sono", name: "Sono", type: "Magia", attr: "INT", dc: "Resist.", success: "O inimigo perde o turno", fail: "Ele cambaleia, mas resiste", exhaust: true },
+  {
+    id: "sujo",
+    name: "Golpe Sujo",
+    type: "Ataque",
+    attr: "DES",
+    dc: "12",
+    success: "4 de dano e Fraqueza",
+    fail: "Ele percebe. Nada.",
+    damage: 4,
+  },
+  {
+    id: "oracao",
+    name: "Oração de Cura",
+    type: "Oração",
+    attr: "SAB",
+    dc: "10",
+    success: "Cura 2d6",
+    fail: "Cura 2",
+    heal: 7,
+    exhaust: true,
+  },
+  {
+    id: "sono",
+    name: "Sono",
+    type: "Magia",
+    attr: "INT",
+    dc: "Resist.",
+    success: "O inimigo perde o turno",
+    fail: "Ele cambaleia, mas resiste",
+    exhaust: true,
+  },
 ];
 
 /* ---------------- Herói de exemplo ---------------- */
@@ -256,9 +570,52 @@ export const SAMPLE_HERO = {
 };
 
 export const JOURNAL = [
-  { day: 1, time: "Manhã", text: "Parti do acampamento na borda da Charneca. O vento cheirava a corda molhada.", tag: "Partida" },
-  { day: 1, time: "Tarde", text: "O enforcado que ainda respira. Cortei a corda. Ele me agradeceu tentando me matar. Venci.", tag: "Cena" },
-  { day: 2, time: "Noite", text: "Vila de Pedra-Funda, cercada por lobos. Dormi na estalagem por 5 ouro.", tag: "Vila" },
-  { day: 2, time: "Noite", text: "Hesper, a ferreira cega, pediu que eu trouxesse o martelo do filho, perdido na ruína ao norte.", tag: "Pedido" },
+  {
+    day: 1,
+    time: "Manhã",
+    text: "Parti do acampamento na borda da Charneca. O vento cheirava a corda molhada.",
+    tag: "Partida",
+  },
+  {
+    day: 1,
+    time: "Tarde",
+    text: "O enforcado que ainda respira. Cortei a corda. Ele me agradeceu tentando me matar. Venci.",
+    tag: "Cena",
+  },
+  {
+    day: 2,
+    time: "Noite",
+    text: "Vila de Pedra-Funda, cercada por lobos. Dormi na estalagem por 5 ouro.",
+    tag: "Vila",
+  },
+  {
+    day: 2,
+    time: "Noite",
+    text: "Hesper, a ferreira cega, pediu que eu trouxesse o martelo do filho, perdido na ruína ao norte.",
+    tag: "Pedido",
+  },
   { day: 3, time: "Manhã", text: "Subi ao nível 2. Aprendi Estocada Dupla.", tag: "Nível" },
 ];
+
+/* ---------------- Frases com nomes de monstros ---------------- */
+
+/** "o Rei Debaixo da Lama", "a Mãe das Moscas", "um carniçal" */
+export function withArticle(name: string) {
+  return /^(O|A) /.test(name)
+    ? name.charAt(0).toLowerCase() + name.slice(1)
+    : `um ${name.toLowerCase()}`;
+}
+
+/** Junta preposição e artigo: "pelo Rei…", "da Mãe…", "por um carniçal". */
+export function prepArticle(prep: "por" | "de", name: string) {
+  const w = withArticle(name);
+  const joined: Record<string, string> = {
+    "por o": "pelo",
+    "por a": "pela",
+    "de o": "do",
+    "de a": "da",
+  };
+  const [art, ...rest] = w.split(" ");
+  const j = joined[`${prep} ${art}`];
+  return j ? `${j} ${rest.join(" ")}` : `${prep} ${w}`;
+}

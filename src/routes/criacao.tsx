@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -18,15 +18,24 @@ import {
   roll3d6,
   type AttrKey,
 } from "@/game/data";
+import { buildHero, finalAttrs, heroToSheet } from "@/game/hero";
+import { game } from "@/game/store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/criacao")({
   head: () => ({
     meta: [
       { title: "Criação do herói — Mesa Vazia" },
-      { name: "description", content: "Role 3d6 para os seis atributos, escolha raça, classe, antecedente, traços e a motivação do seu herói." },
+      {
+        name: "description",
+        content:
+          "Role 3d6 para os seis atributos, escolha raça, classe, antecedente, traços e a motivação do seu herói.",
+      },
       { property: "og:title", content: "Criação do herói — Mesa Vazia" },
-      { property: "og:description", content: "A ficha de papel se preenche enquanto você decide quem vai morrer primeiro." },
+      {
+        property: "og:description",
+        content: "A ficha de papel se preenche enquanto você decide quem vai morrer primeiro.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -36,7 +45,8 @@ export const Route = createFileRoute("/criacao")({
 
 const STEPS = ["Atributos", "Raça", "Classe", "Antecedente", "Traços", "Nome e motivação"];
 
-const rollAll = () => Object.fromEntries(ATTRS.map((a) => [a.key, roll3d6()])) as Record<AttrKey, number>;
+const rollAll = () =>
+  Object.fromEntries(ATTRS.map((a) => [a.key, roll3d6()])) as Record<AttrKey, number>;
 
 function Option({
   active,
@@ -60,11 +70,18 @@ function Option({
       onClick={onClick}
       className={cn(
         "flex w-full items-start gap-3 rounded-sm border px-4 py-3 text-left transition-all",
-        active ? "border-ember bg-ember/10 shadow-[var(--shadow-ember)]" : "border-border/60 hover:border-bone/40 hover:bg-accent/40",
+        active
+          ? "border-ember bg-ember/10 shadow-[var(--shadow-ember)]"
+          : "border-border/60 hover:border-bone/40 hover:bg-accent/40",
         disabled && "cursor-not-allowed opacity-35 hover:border-border/60 hover:bg-transparent",
       )}
     >
-      <span className={cn("mt-2 size-2 shrink-0 rotate-45 border", active ? "border-ember bg-ember" : "border-bone-dim")} />
+      <span
+        className={cn(
+          "mt-2 size-2 shrink-0 rotate-45 border",
+          active ? "border-ember bg-ember" : "border-bone-dim",
+        )}
+      />
       <span className="flex-1">
         <span className="font-display text-lg text-bone">{title}</span>
         {sub && <span className="block font-body text-sm text-bone-dim">{sub}</span>}
@@ -77,7 +94,14 @@ function Option({
 function Creation() {
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<"ordem" | "distribuir">("ordem");
-  const [base, setBase] = useState<Record<AttrKey, number>>({ FOR: 13, DES: 10, CON: 14, INT: 8, SAB: 11, CAR: 12 });
+  const [base, setBase] = useState<Record<AttrKey, number>>({
+    FOR: 13,
+    DES: 10,
+    CON: 14,
+    INT: 8,
+    SAB: 11,
+    CAR: 12,
+  });
   const [rolling, setRolling] = useState(0);
   const [swap, setSwap] = useState<AttrKey | null>(null);
   const [raceId, setRaceId] = useState<string>();
@@ -87,42 +111,62 @@ function Creation() {
   const [flaws, setFlaws] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [motivation, setMotivation] = useState<string>();
+  const [humanAttr, setHumanAttr] = useState<AttrKey>();
+  const navigate = useNavigate();
 
   const race = RACES.find((r) => r.id === raceId);
   const cls = CLASSES.find((c) => c.id === classId);
 
-  const attrs = useMemo(() => {
-    const out = { ...base };
-    if (race) for (const [k, v] of Object.entries(race.mods)) out[k as AttrKey] = Math.min(18, Math.max(3, out[k as AttrKey] + (v ?? 0)));
-    if (race?.id === "humano") {
-      const k = cls?.main ?? "FOR";
-      out[k] = Math.min(18, out[k] + 2);
-    }
-    return out;
-  }, [base, race, cls]);
+  const attrs = useMemo(
+    () =>
+      finalAttrs({
+        base,
+        raceId: raceId ?? "",
+        classId: classId ?? "",
+        background: bg ?? "",
+        humanAttr,
+      }),
+    [base, raceId, classId, bg, humanAttr],
+  );
 
-  const points = 1 + flaws.length - virtues.reduce((s, v) => s + (VIRTUES.find((x) => x.name === v)?.cost ?? 0), 0);
+  const points =
+    1 +
+    flaws.length -
+    virtues.reduce((s, v) => s + (VIRTUES.find((x) => x.name === v)?.cost ?? 0), 0);
 
-  const armorBase = cls ? ({ guerreiro: 15, clerigo: 15, ladrao: 12, mago: 10 } as Record<string, number>)[cls.id] : undefined;
-  const sheet = {
-    name: name || undefined,
-    race: race?.name,
-    cls: cls?.name,
-    background: bg,
-    motivation,
-    level: cls ? 1 : undefined,
-    xp: 0,
-    attrs,
-    hp: cls ? cls.baseHp + mod(attrs.CON) * 3 : undefined,
-    hpMax: cls ? cls.baseHp + mod(attrs.CON) * 3 : undefined,
-    ac: armorBase !== undefined ? armorBase + mod(attrs.DES) : undefined,
-    attack: cls ? (cls.id === "guerreiro" ? 1 : 0) : undefined,
-    weapon: cls?.gear.split(",")[0],
-    armor: cls ? cls.gear.split(",").slice(1).join(",").trim() : undefined,
+  const choices = {
+    name,
+    base,
+    raceId: raceId ?? "",
+    classId: classId ?? "",
+    background: bg ?? "",
+    motivation: motivation ?? "",
     virtues,
     flaws,
-    saves: cls?.saves,
-    highlight: cls?.main,
+    humanAttr,
+  };
+  // a prévia usa as mesmas contas do jogo; campos ainda não escolhidos ficam em branco
+  const sheet = cls
+    ? {
+        ...heroToSheet(buildHero(choices)),
+        name: name || undefined,
+        race: race?.name,
+        background: bg,
+        motivation,
+      }
+    : {
+        name: name || undefined,
+        race: race?.name,
+        background: bg,
+        motivation,
+        attrs,
+        virtues,
+        flaws,
+      };
+
+  const start = () => {
+    game.start(buildHero(choices));
+    void navigate({ to: "/mapa" });
   };
 
   const doRoll = () => {
@@ -160,7 +204,11 @@ function Creation() {
                 onClick={() => i <= step && setStep(i)}
                 className={cn(
                   "flex w-full items-center gap-3 whitespace-nowrap py-2.5 text-left transition-colors lg:border-l-2 lg:pl-4",
-                  i === step ? "border-ember text-ember-glow" : i < step ? "border-bone-dim/40 text-bone" : "border-border/40 text-bone-dim/50",
+                  i === step
+                    ? "border-ember text-ember-glow"
+                    : i < step
+                      ? "border-bone-dim/40 text-bone"
+                      : "border-border/40 text-bone-dim/50",
                 )}
               >
                 <span className="font-mono text-xs">{String(i + 1).padStart(2, "0")}</span>
@@ -184,7 +232,10 @@ function Creation() {
                     <button
                       key={m}
                       onClick={() => setMode(m)}
-                      className={cn("label-mono rounded-sm px-3 py-1.5", mode === m ? "bg-ember/15 text-ember" : "text-bone-dim hover:text-bone")}
+                      className={cn(
+                        "label-mono rounded-sm px-3 py-1.5",
+                        mode === m ? "bg-ember/15 text-ember" : "text-bone-dim hover:text-bone",
+                      )}
                     >
                       {m === "ordem" ? "Em ordem" : "Distribuir"}
                     </button>
@@ -193,7 +244,9 @@ function Creation() {
                 <Button variant="ember" onClick={doRoll}>
                   Rolar 3d6 ×6
                 </Button>
-                {mode === "distribuir" && <span className="label-mono text-bone-dim">clique em dois para trocar</span>}
+                {mode === "distribuir" && (
+                  <span className="label-mono text-bone-dim">clique em dois para trocar</span>
+                )}
               </div>
 
               <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -203,15 +256,26 @@ function Creation() {
                     onClick={() => clickAttr(a.key)}
                     className={cn(
                       "flex items-center gap-4 rounded-sm border bg-card/60 p-4 text-left transition-all",
-                      swap === a.key ? "border-ember shadow-[var(--shadow-ember)]" : "border-border/60",
+                      swap === a.key
+                        ? "border-ember shadow-[var(--shadow-ember)]"
+                        : "border-border/60",
                       mode === "distribuir" && "cursor-pointer hover:border-bone/40",
                       mode === "ordem" && "cursor-default",
                     )}
                   >
-                    <D20 value={base[a.key]} size={54} tone={base[a.key] >= 15 ? "ember" : base[a.key] <= 6 ? "blood" : "bone"} rolling={rolling > 0} key={`${rolling}-${i}`} />
+                    <D20
+                      value={base[a.key]}
+                      size={54}
+                      tone={base[a.key] >= 15 ? "ember" : base[a.key] <= 6 ? "blood" : "bone"}
+                      rolling={rolling > 0}
+                      key={`${rolling}-${i}`}
+                    />
                     <div>
                       <div className="font-display text-xl text-bone">
-                        {a.key} <span className="font-mono text-sm text-ember">{fmtMod(mod(base[a.key]))}</span>
+                        {a.key}{" "}
+                        <span className="font-mono text-sm text-ember">
+                          {fmtMod(mod(base[a.key]))}
+                        </span>
                       </div>
                       <div className="text-sm text-bone-dim">{a.name}</div>
                       <div className="text-xs text-bone-dim/70">{a.use}</div>
@@ -219,7 +283,9 @@ function Creation() {
                   </button>
                 ))}
               </div>
-              <p className="label-mono mt-6 text-bone-dim/70">3 = −3 · 4–5 = −2 · 6–8 = −1 · 9–12 = 0 · 13–15 = +1 · 16–17 = +2 · 18 = +3</p>
+              <p className="label-mono mt-6 text-bone-dim/70">
+                3 = −3 · 4–5 = −2 · 6–8 = −1 · 9–12 = 0 · 13–15 = +1 · 16–17 = +2 · 18 = +3
+              </p>
             </>
           )}
 
@@ -228,9 +294,40 @@ function Creation() {
               <h2 className="font-display text-4xl text-bone">De que sangue você vem?</h2>
               <div className="mt-6 grid gap-2">
                 {RACES.map((r) => (
-                  <Option key={r.id} active={raceId === r.id} onClick={() => setRaceId(r.id)} title={r.name} sub={r.trait} aside={r.adjust} />
+                  <Option
+                    key={r.id}
+                    active={raceId === r.id}
+                    onClick={() => {
+                      setRaceId(r.id);
+                      if (r.noMage && classId === "mago") setClassId(undefined);
+                    }}
+                    title={r.name}
+                    sub={r.trait}
+                    aside={r.adjust}
+                  />
                 ))}
               </div>
+              {race?.chooseAttr && (
+                <div className="mt-6">
+                  <div className="label-mono text-bone-dim">Onde o humano ganha +2?</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {ATTRS.map((a) => (
+                      <button
+                        key={a.key}
+                        onClick={() => setHumanAttr(a.key)}
+                        className={cn(
+                          "label-mono rounded-sm border px-3 py-1.5",
+                          (humanAttr ?? cls?.main ?? "FOR") === a.key
+                            ? "border-ember bg-ember/15 text-ember"
+                            : "border-border/60 text-bone-dim hover:text-bone",
+                        )}
+                      >
+                        {a.key} {base[a.key]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -247,7 +344,9 @@ function Creation() {
                       active={classId === c.id}
                       onClick={() => setClassId(c.id)}
                       title={c.name}
-                      sub={blocked ? `${race?.name} não pode ser Mago.` : `${c.ability}. ${c.gear}.`}
+                      sub={
+                        blocked ? `${race?.name} não pode ser Mago.` : `${c.ability}. ${c.gear}.`
+                      }
                       aside={`${c.main} · ${c.hitDie}`}
                     />
                   );
@@ -261,7 +360,13 @@ function Creation() {
               <h2 className="font-display text-4xl text-bone">Quem você era antes?</h2>
               <div className="mt-6 grid gap-2 sm:grid-cols-2">
                 {BACKGROUNDS.map((b) => (
-                  <Option key={b.name} active={bg === b.name} onClick={() => setBg(b.name)} title={b.name} sub={b.bonus} />
+                  <Option
+                    key={b.name}
+                    active={bg === b.name}
+                    onClick={() => setBg(b.name)}
+                    title={b.name}
+                    sub={b.bonus}
+                  />
                 ))}
               </div>
             </>
@@ -272,19 +377,31 @@ function Creation() {
               <div className="flex items-end justify-between">
                 <h2 className="font-display text-4xl text-bone">Virtudes e defeitos</h2>
                 <div className="text-right">
-                  <div className={cn("font-mono text-3xl", points < 0 ? "text-blood" : "text-ember")}>{points}</div>
+                  <div
+                    className={cn("font-mono text-3xl", points < 0 ? "text-blood" : "text-ember")}
+                  >
+                    {points}
+                  </div>
                   <div className="label-mono text-bone-dim">pontos</div>
                 </div>
               </div>
-              <p className="mt-2 font-narrative text-lg italic text-bone-dim">Cada defeito aceito vale um ponto. No máximo dois.</p>
+              <p className="mt-2 font-narrative text-lg italic text-bone-dim">
+                Cada defeito aceito vale um ponto. No máximo dois.
+              </p>
               <h3 className="label-mono mt-6 text-rot">Virtudes</h3>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {VIRTUES.map((v) => (
                   <Option
                     key={v.name}
                     active={virtues.includes(v.name)}
-                    onClick={() => setVirtues((s) => (s.includes(v.name) ? s.filter((x) => x !== v.name) : [...s, v.name]))}
+                    disabled={!virtues.includes(v.name) && v.cost > points}
+                    onClick={() =>
+                      setVirtues((s) =>
+                        s.includes(v.name) ? s.filter((x) => x !== v.name) : [...s, v.name],
+                      )
+                    }
                     title={v.name}
+                    sub={v.desc}
                     aside={`${v.cost} pt`}
                   />
                 ))}
@@ -293,11 +410,16 @@ function Creation() {
               <div className="mt-2 grid gap-2 sm:grid-cols-3">
                 {FLAWS.map((f) => (
                   <Option
-                    key={f}
-                    active={flaws.includes(f)}
-                    disabled={!flaws.includes(f) && flaws.length >= 2}
-                    onClick={() => setFlaws((s) => (s.includes(f) ? s.filter((x) => x !== f) : [...s, f]))}
-                    title={f}
+                    key={f.name}
+                    active={flaws.includes(f.name)}
+                    disabled={flaws.includes(f.name) ? points < 1 : flaws.length >= 2}
+                    onClick={() =>
+                      setFlaws((s) =>
+                        s.includes(f.name) ? s.filter((x) => x !== f.name) : [...s, f.name],
+                      )
+                    }
+                    title={f.name}
+                    sub={f.desc}
                     aside="+1"
                   />
                 ))}
@@ -315,30 +437,50 @@ function Creation() {
                   placeholder="Escreva um nome…"
                   className="flex-1 border-b border-bone/30 bg-transparent px-1 py-2 font-narrative text-2xl italic text-bone placeholder:text-bone-dim/50 focus:border-ember focus:outline-none"
                 />
-                <Button variant="bone" onClick={() => setName(NAMES[Math.floor(Math.random() * NAMES.length)] ?? "Aldric")}>
+                <Button
+                  variant="bone"
+                  onClick={() =>
+                    setName(NAMES[Math.floor(Math.random() * NAMES.length)] ?? "Aldric")
+                  }
+                >
                   Sortear
                 </Button>
               </div>
               <h3 className="label-mono mt-8 text-bone-dim">Por que você está na estrada?</h3>
               <div className="mt-2 grid gap-2">
                 {MOTIVATIONS.map((m) => (
-                  <Option key={m} active={motivation === m} onClick={() => setMotivation(m)} title={m} />
+                  <Option
+                    key={m}
+                    active={motivation === m}
+                    onClick={() => setMotivation(m)}
+                    title={m}
+                  />
                 ))}
               </div>
             </>
           )}
 
           <div className="mt-10 flex items-center justify-between border-t border-border/50 pt-5">
-            <Button variant="ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)} className="font-display text-base text-bone-dim">
+            <Button
+              variant="ghost"
+              disabled={step === 0}
+              onClick={() => setStep((s) => s - 1)}
+              className="font-display text-base text-bone-dim"
+            >
               ← Voltar
             </Button>
             {step < 5 ? (
-              <Button variant="ember" size="lg" disabled={!canNext} onClick={() => setStep((s) => s + 1)}>
+              <Button
+                variant="ember"
+                size="lg"
+                disabled={!canNext}
+                onClick={() => setStep((s) => s + 1)}
+              >
                 Próxima etapa →
               </Button>
             ) : (
-              <Button asChild variant="ember" size="lg" disabled={!canNext}>
-                <Link to="/mapa">Começar a campanha</Link>
+              <Button variant="ember" size="lg" disabled={!canNext} onClick={start}>
+                Começar a campanha
               </Button>
             )}
           </div>

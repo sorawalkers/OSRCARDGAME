@@ -13,9 +13,16 @@ Roguelike de mesa solo, dark fantasy, regras old school (B/X e AD&D), combate co
 
 Este repositório não está mais ligado ao Lovable; pode editar tudo à mão. `src/lib/lovable-error-reporting.ts` e `@lovable.dev/vite-tanstack-config` continuam porque o build usa.
 
+## Estado do jogo
+
+- `src/game/hero.ts`: `buildHero` monta o herói a partir das escolhas da criação; também calcula CA, ataque, resistências, preços e bônus de XP.
+- `src/game/store.ts`: a partida (herói, dia, hora, lugar, diário, morte) e o cemitério, salvos no `localStorage`. As telas leem com `useGame()` e mudam o estado só pelas ações de `game` (`travel`, `hurt`, `heal`, `gainGold`, `spend`, `corrupt`, `log`, `die`...).
+- Telas de jogo usam o padrão `Tela() → if (!hero) return <GameShell>…</GameShell>; return <TelaInner hero={hero} />`, e o `GameShell` mostra o aviso de "sem partida" ou "herói morto".
+- Instale com `bun install` (o `npm install` falha por causa do `overrides`). Testes: `bun run test`. Rode também `npx tsc --noEmit` e `npx eslint` nos arquivos alterados.
+
 ## Plano de trabalho (combinado com o usuário)
 
-1. Estado de jogo compartilhado entre as telas, salvo no navegador. O herói criado substitui o `SAMPLE_HERO`.
+1. ~~Estado de jogo compartilhado entre as telas, salvo no navegador.~~ Feito.
 2. Combate de verdade: baralho por classe, dano pelo dado da arma, CA, testes de resistência, ilustrações no combate.
 3. Mapa gerado e cenas encadeadas (portar as 15 cenas).
 4. Vilas, NPCs, níveis e legado.

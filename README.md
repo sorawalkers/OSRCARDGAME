@@ -6,18 +6,18 @@ O documento de design completo está em [`referencia/MESA_VAZIA.md`](referencia/
 
 ## Estado atual
 
-- **Base de interface:** este repositório, gerado inicialmente com o Lovable. Tem React 19, TanStack Start e Router, Tailwind 4 e componentes shadcn. As telas existem (início, criação, mapa, cena, combate, vila, epitáfio, bestiário), mas ainda usam um herói de exemplo e conteúdo fixo.
+- **Base de interface:** este repositório, gerado inicialmente com o Lovable. Tem React 19, TanStack Start e Router, Tailwind 4 e componentes shadcn. As telas (início, criação, mapa, cena, combate, vila, epitáfio, bestiário) já compartilham uma partida de verdade, salva no navegador. O mapa, a cena e as cartas ainda são de exemplo.
 - **Motor de referência:** [`referencia/prototipo-mesa-vazia.html`](referencia/prototipo-mesa-vazia.html), o protótipo jogável em arquivo único, com todas as regras e conteúdos já testados. Abra direto no navegador. O trabalho agora é trazer esse motor para a base em React.
 
 ## Rodar localmente
 
-Precisa de Node.js 20 ou mais recente.
+Precisa de Node.js 20 ou mais recente e do [Bun](https://bun.sh) para instalar as dependências. O `npm install` falha neste projeto por causa do `overrides` do `package.json`.
 
 ```sh
-npm install
-npm run dev      # servidor de desenvolvimento
-npm run build    # build de produção
-npm test         # testes (vitest)
+bun install
+bun run dev      # servidor de desenvolvimento
+bun run build    # build de produção
+bun run test     # testes (vitest)
 ```
 
 ## Estrutura
@@ -27,7 +27,9 @@ src/
   routes/            telas (uma rota por tela)
   components/game/   componentes do jogo (ficha, cartas, d20, mapa, selo de intenção...)
   components/ui/     componentes base (shadcn)
-  game/data.ts       dados e regras (ainda de exemplo)
+  game/data.ts       dados do jogo (raças, classes, equipamento, monstros, cartas)
+  game/hero.ts       o herói: montagem a partir da criação e valores da ficha
+  game/store.ts      estado da partida, salvo no navegador
   assets/monsters/   ilustrações do bestiário
 referencia/          documento de design e protótipo jogável
 ```

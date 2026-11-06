@@ -5,14 +5,22 @@ import { Candle } from "@/components/game/Candle";
 import { D20 } from "@/components/game/D20";
 import { GameCard } from "@/components/game/GameCard";
 import { DECK } from "@/game/data";
+import { useGame } from "@/game/store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Mesa Vazia — Roguelike de mesa solo em dark fantasy" },
-      { name: "description", content: "Crie seu herói em 3d6, role os dados e enfrente um mundo que nasce sob seus pés. Quando você morre, o mundo lembra." },
+      {
+        name: "description",
+        content:
+          "Crie seu herói em 3d6, role os dados e enfrente um mundo que nasce sob seus pés. Quando você morre, o mundo lembra.",
+      },
       { property: "og:title", content: "Mesa Vazia — Roguelike de mesa solo" },
-      { property: "og:description", content: "Ficha de papel, d20 na mesa e monstros saídos dos velhos bestiários." },
+      {
+        property: "og:description",
+        content: "Ficha de papel, d20 na mesa e monstros saídos dos velhos bestiários.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -20,14 +28,23 @@ export const Route = createFileRoute("/")({
   component: Title,
 });
 
-const MENU = [
-  { to: "/criacao", label: "Sentar à mesa", hint: "Nova campanha" },
-  { to: "/mapa", label: "Continuar", hint: "Morwen Vey · Dia 3" },
-  { to: "/bestiario", label: "Bestiário", hint: "O que espera na névoa" },
-  { to: "/epitafio", label: "Cemitério", hint: "Heróis que vieram antes" },
-] as const;
-
 function Title() {
+  const s = useGame();
+  // "Continuar" só faz sentido com uma partida salva e um herói vivo
+  const cont =
+    s.hero && !s.death
+      ? { to: "/mapa" as const, hint: `${s.hero.name} · Dia ${s.day}` }
+      : { to: "/criacao" as const, hint: "nenhuma campanha salva" };
+  const MENU = [
+    {
+      to: "/criacao" as const,
+      label: "Sentar à mesa",
+      hint: s.hero && !s.death ? "Nova campanha (apaga a atual)" : "Nova campanha",
+    },
+    { to: cont.to, label: "Continuar", hint: cont.hint },
+    { to: "/bestiario" as const, label: "Bestiário", hint: "O que espera na névoa" },
+    { to: "/epitafio" as const, label: "Cemitério", hint: "Heróis que vieram antes" },
+  ];
   return (
     <div className="vignette relative flex min-h-screen flex-col overflow-hidden">
       <div className="relative z-10 mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-6 py-16 lg:grid-cols-[1.1fr_1fr]">
@@ -39,21 +56,23 @@ function Title() {
             Vazia
           </h1>
           <p className="mt-6 max-w-md font-narrative text-xl italic leading-relaxed text-bone-dim">
-            O mestre já chegou. As velas estão acesas. Falta só você — e a cadeira dos outros jogadores
-            continua vazia.
+            O mestre já chegou. As velas estão acesas. Falta só você — e a cadeira dos outros
+            jogadores continua vazia.
           </p>
 
           <nav className="mt-10 max-w-sm">
             {MENU.map((m, i) => (
               <Link
-                key={m.to}
+                key={m.label}
                 to={m.to}
                 className="group flex items-baseline justify-between border-b border-border/50 py-3 transition-colors hover:border-ember/60"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
                 <span className="flex items-center gap-3">
                   <span className="size-2 rotate-45 border border-ember/70 transition-all group-hover:bg-ember group-hover:shadow-[var(--shadow-ember)]" />
-                  <span className="font-display text-2xl text-bone group-hover:text-ember-glow">{m.label}</span>
+                  <span className="font-display text-2xl text-bone group-hover:text-ember-glow">
+                    {m.label}
+                  </span>
                 </span>
                 <span className="label-mono text-bone-dim">{m.hint}</span>
               </Link>
@@ -73,7 +92,9 @@ function Title() {
           <Candle className="absolute left-1/2 top-0 -translate-x-1/2" height={150} />
           <div className="paper absolute left-6 top-40 h-80 w-64 -rotate-6 rounded-sm p-5">
             <div className="relative z-10">
-              <div className="border-b-2 ink-line pb-1 font-display text-lg text-ink">Ficha do Aventureiro</div>
+              <div className="border-b-2 ink-line pb-1 font-display text-lg text-ink">
+                Ficha do Aventureiro
+              </div>
               <div className="paper-rule mt-3 h-52 font-narrative italic leading-7 text-ink-faded">
                 Nome: ______________
                 <br />
@@ -94,7 +115,12 @@ function Title() {
             <GameCard card={DECK[5]!} />
           </div>
           <D20 value={20} size={86} tone="ember" className="absolute bottom-10 left-44 rotate-12" />
-          <D20 value={7} size={60} tone="bone" className="absolute bottom-4 left-72 -rotate-12 opacity-80" />
+          <D20
+            value={7}
+            size={60}
+            tone="bone"
+            className="absolute bottom-4 left-72 -rotate-12 opacity-80"
+          />
         </div>
       </div>
 
